@@ -1,46 +1,19 @@
 ```
 # Compiled and build artifacts
-**/*.rs.bk
-**/*.pyc
-**/*.class
-**/*.o
-**/*.obj
-**/*.out
-**/*.exe
-**/*.dll
-**/*.so
-**/*.a
-
+*.o
+*.obj
+*.out
 # Dependencies
-**/target/
-**/Cargo.lock
-**/vendor/
-**/.bundle/
-**/node_modules/
-**/venv/
-**/.venv/
-**/__pycache__/
-**/.mypy_cache/
-**/.pytest_cache/
-**/.gradle/
-
+target/
 # Logs and temp files
-**/*.log
-**/*.tmp
-**/*.swp
-**/*.swo
-**/coverage/
-**/htmlcov/
-**/.coverage
-
+*.log
+*.tmp
+*.swp
 # Environment
-**/.env
-**/.env.local
-**/*.env.*
-
+.env
+.env.local
+.env.*
 # Editors
-**/.vscode/
-**/.idea/
-**/.DS_Store
-**/Thumbs.db
+.vscode/
+.idea/
 ```
