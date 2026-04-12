@@ -1,6 +1,6 @@
 //! File Converter CLI
 //! 
-//! A command-line tool for converting between Word, Excel, PDF, and Markdown formats.
+//! A command-line tool for converting between Word, Excel, PDF, Markdown, and ICO formats.
 //!
 //! # Usage
 //!
@@ -22,6 +22,12 @@
 //!
 //! # Convert Markdown to PDF
 //! file_converter md-to-pdf notes.md
+//!
+//! # Convert Image to ICO
+//! file_converter image-to-ico logo.png
+//!
+//! # Convert Image to multi-resolution ICO
+//! file_converter image-to-ico-multi icon.png
 //!
 //! # List all supported conversions
 //! file_converter list
@@ -125,6 +131,30 @@ enum Commands {
         output: Option<PathBuf>,
     },
 
+    /// Convert Image to ICO
+    ImageToIco {
+        /// Input image file (PNG, JPEG, BMP, WEBP)
+        input: PathBuf,
+
+        /// Output ICO file (optional)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Icon size in pixels (default: 256)
+        #[arg(short, long, default_value = "256")]
+        size: u16,
+    },
+
+    /// Convert Image to multi-resolution ICO
+    ImageToIcoMulti {
+        /// Input image file (PNG, JPEG, BMP, WEBP)
+        input: PathBuf,
+
+        /// Output ICO file (optional)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+
     /// List supported conversions
     List,
 }
@@ -166,6 +196,12 @@ fn main() -> Result<()> {
         }
         Commands::MdToPdf { input, output } => {
             handle_md_to_pdf(&input, output)?;
+        }
+        Commands::ImageToIco { input, output, size } => {
+            handle_image_to_ico(&input, output, size)?;
+        }
+        Commands::ImageToIcoMulti { input, output } => {
+            handle_image_to_ico_multi(&input, output)?;
         }
         Commands::List => {
             handle_list();
@@ -306,6 +342,34 @@ fn handle_md_to_pdf(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+fn handle_image_to_ico(input: &PathBuf, output: Option<PathBuf>, size: u16) -> Result<()> {
+    use file_converter::convert_image_to_ico_size;
+    
+    let output_path = output.unwrap_or_else(|| {
+        input.with_extension("ico")
+    });
+
+    convert_image_to_ico_size(input, &output_path, size)
+        .with_context(|| format!("Failed to convert image to ICO ({}x{})", size, size))?;
+    
+    println!("Successfully converted {:?} to {}x{} ICO: {:?}", input, size, size, output_path);
+    Ok(())
+}
+
+fn handle_image_to_ico_multi(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::convert_image_to_ico_multi;
+    
+    let output_path = output.unwrap_or_else(|| {
+        input.with_extension("ico")
+    });
+
+    convert_image_to_ico_multi(input, &output_path)
+        .with_context(|| format!("Failed to convert image to multi-resolution ICO"))?;
+    
+    println!("Successfully converted {:?} to multi-resolution ICO: {:?}", input, output_path);
+    Ok(())
+}
+
 fn generate_output_path(input: &PathBuf, target_format: &FileFormat) -> PathBuf {
     let stem = input.file_stem()
         .and_then(|s| s.to_str())
@@ -322,6 +386,7 @@ fn handle_list() {
     println!("  Word (DOCX) <-> Markdown");
     println!("  Excel (XLSX) <-> Markdown");
     println!("  PDF <-> Markdown");
+    println!("  Image (PNG/JPEG/BMP/WEBP) -> ICO");
     println!();
     println!("Examples:");
     println!("  file_converter word-to-md document.docx");
@@ -330,6 +395,9 @@ fn handle_list() {
     println!("  file_converter md-to-excel tables.md");
     println!("  file_converter pdf-to-md report.pdf");
     println!("  file_converter md-to-pdf notes.md");
+    println!("  file_converter image-to-ico logo.png");
+    println!("  file_converter image-to-ico icon.png --size 64");
+    println!("  file_converter image-to-ico-multi icon.png");
     println!();
     println!("Or use the generic convert command:");
     println!("  file_converter convert input.docx --to markdown");
