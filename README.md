@@ -244,6 +244,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+For detailed information on extending the converter with new formats, see [SKILLS.md](SKILLS.md).
+
 ## Acknowledgments
 
 - Thanks to all the Rust community members who created the underlying libraries

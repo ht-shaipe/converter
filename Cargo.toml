@@ -23,12 +23,18 @@ tokio = { version = "1.35", features = ["full"], optional = true }
 # Word document processing (docx)
 docx-rs = "0.4"
 zip = "0.6"
+base64 = "0.21"
+regex = "1.10"
 
 # Excel processing
 calamine = "0.23"
 
 # PDF processing
 lopdf = "0.31"
+
+# Image processing (for ICO conversion)
+image = "0.24"
+ico = "0.3"
 
 # Markdown processing
 pulldown-cmark = "0.9"
