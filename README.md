@@ -99,35 +99,59 @@ file_converter convert input.md --output output.pdf
 ### Library Usage
 
 ```rust
-use file_converter::{FileConverter, FileFormat};
+use file_converter::{docx_to_md, md_to_docx, xlsx_to_md, md_to_xlsx, pdf_to_md, md_to_pdf};
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a new converter
-    let converter = FileConverter::new();
-    
     // Convert DOCX to Markdown
-    converter.convert(
+    docx_to_md(
         Path::new("document.docx"),
         Path::new("output.md")
     )?;
     
-    // Convert with automatic output path generation
-    let output_path = converter.convert_auto(
-        Path::new("data.xlsx"),
-        FileFormat::Markdown
+    // Convert Markdown to Word
+    md_to_docx(
+        Path::new("readme.md"),
+        Path::new("document.docx")
     )?;
     
-    println!("Converted file: {:?}", output_path);
+    // Convert Excel to Markdown
+    xlsx_to_md(
+        Path::new("data.xlsx"),
+        Path::new("tables.md")
+    )?;
+    
+    // Convert Markdown to Excel
+    md_to_xlsx(
+        Path::new("tables.md"),
+        Path::new("data.xlsx")
+    )?;
+    
+    // Convert PDF to Markdown
+    pdf_to_md(
+        Path::new("report.pdf"),
+        Path::new("notes.md")
+    )?;
+    
+    // Convert Markdown to PDF
+    md_to_pdf(
+        Path::new("notes.md"),
+        Path::new("report.pdf")
+    )?;
     
     Ok(())
 }
 ```
 
+#### Using Specific Converter Modules
+
 ```rust
-// Custom output directory
-let converter = FileConverter::new()
-    .with_output_dir(PathBuf::from("/output/path"));
+use file_converter::converters::word;
+use std::path::Path;
+
+// Direct access to word converter
+word::docx_to_md(Path::new("input.docx"), Path::new("output.md"))?;
+word::md_to_docx(Path::new("input.md"), Path::new("output.docx"))?;
 ```
 
 ## Supported Formats
@@ -154,10 +178,12 @@ The project is organized into the following modules:
 
 - **`error`**: Error types and result handling
 - **`formats`**: File format detection and conversion type definitions
-- **`converter`**: Core conversion implementations
-  - `word`: Word document conversions
-  - `excel`: Excel spreadsheet conversions
-  - `pdf`: PDF conversions
+- **`converters`**: Individual file format converters
+  - `word`: Word document (DOCX) conversions
+  - `excel`: Excel spreadsheet (XLSX) conversions
+  - `pdf`: PDF document conversions
+
+Each converter is implemented as a separate module, making it easy to extend with new formats.
 
 ## Dependencies
 

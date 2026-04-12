@@ -1,10 +1,34 @@
 //! File Converter CLI
 //! 
 //! A command-line tool for converting between Word, Excel, PDF, and Markdown formats.
+//!
+//! # Usage
+//!
+//! ```bash
+//! # Convert Word to Markdown
+//! file_converter word-to-md document.docx
+//!
+//! # Convert Markdown to Word
+//! file_converter md-to-word readme.md
+//!
+//! # Convert Excel to Markdown
+//! file_converter excel-to-md data.xlsx
+//!
+//! # Convert Markdown to Excel
+//! file_converter md-to-excel tables.md
+//!
+//! # Convert PDF to Markdown
+//! file_converter pdf-to-md report.pdf
+//!
+//! # Convert Markdown to PDF
+//! file_converter md-to-pdf notes.md
+//!
+//! # List all supported conversions
+//! file_converter list
+//! ```
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use file_converter::{FileConverter, FileFormat};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -113,17 +137,6 @@ enum FormatArg {
     Markdown,
 }
 
-impl From<FormatArg> for FileFormat {
-    fn from(format: FormatArg) -> Self {
-        match format {
-            FormatArg::Word => FileFormat::Word,
-            FormatArg::Excel => FileFormat::Excel,
-            FormatArg::Pdf => FileFormat::Pdf,
-            FormatArg::Markdown => FileFormat::Markdown,
-        }
-    }
-}
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -132,33 +145,27 @@ fn main() -> Result<()> {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     }
 
-    // Create converter with optional output directory
-    let mut converter = FileConverter::new();
-    if let Some(output_dir) = cli.output_dir {
-        converter = converter.with_output_dir(output_dir);
-    }
-
     match cli.command {
         Commands::Convert { input, output, to } => {
-            handle_convert(&converter, &input, output, to)?;
+            handle_convert(&input, output, to)?;
         }
         Commands::WordToMd { input, output } => {
-            handle_word_to_md(&converter, &input, output)?;
+            handle_word_to_md(&input, output)?;
         }
         Commands::MdToWord { input, output } => {
-            handle_md_to_word(&converter, &input, output)?;
+            handle_md_to_word(&input, output)?;
         }
         Commands::ExcelToMd { input, output } => {
-            handle_excel_to_md(&converter, &input, output)?;
+            handle_excel_to_md(&input, output)?;
         }
         Commands::MdToExcel { input, output } => {
-            handle_md_to_excel(&converter, &input, output)?;
+            handle_md_to_excel(&input, output)?;
         }
         Commands::PdfToMd { input, output } => {
-            handle_pdf_to_md(&converter, &input, output)?;
+            handle_pdf_to_md(&input, output)?;
         }
         Commands::MdToPdf { input, output } => {
-            handle_md_to_pdf(&converter, &input, output)?;
+            handle_md_to_pdf(&input, output)?;
         }
         Commands::List => {
             handle_list();
@@ -168,16 +175,45 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle_convert(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>, to: Option<FormatArg>) -> Result<()> {
+fn handle_convert(input: &PathBuf, output: Option<PathBuf>, to: Option<FormatArg>) -> Result<()> {
+    use file_converter::{FileFormat, docx_to_md, md_to_docx, xlsx_to_md, md_to_xlsx, pdf_to_md, md_to_pdf};
+    
+    let source_format = FileFormat::from_path(input)?;
+    
     if let Some(output_path) = output {
-        // Use provided output path
-        converter.convert(input, &output_path)
-            .with_context(|| format!("Failed to convert {:?} to {:?}", input, output_path))?;
+        let target_format = FileFormat::from_extension(&output_path);
+        
+        match (source_format, target_format) {
+            (FileFormat::Word, FileFormat::Markdown) => docx_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Word) => md_to_docx(input, &output_path),
+            (FileFormat::Excel, FileFormat::Markdown) => xlsx_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Excel) => md_to_xlsx(input, &output_path),
+            (FileFormat::Pdf, FileFormat::Markdown) => pdf_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Pdf) => md_to_pdf(input, &output_path),
+            _ => anyhow::bail!("Unsupported conversion: {:?} to {:?}", source_format, target_format),
+        }?;
+        
         println!("Successfully converted {:?} to {:?}", input, output_path);
-    } else if let Some(target_format) = to {
-        // Use target format to auto-generate output path
-        let output_path = converter.convert_auto(input, target_format.into())
-            .with_context(|| format!("Failed to convert {:?} to {:?}", input, target_format))?;
+    } else if let Some(target_format_arg) = to {
+        let target_format = match target_format_arg {
+            FormatArg::Word => FileFormat::Word,
+            FormatArg::Excel => FileFormat::Excel,
+            FormatArg::Pdf => FileFormat::Pdf,
+            FormatArg::Markdown => FileFormat::Markdown,
+        };
+        
+        let output_path = generate_output_path(input, &target_format);
+        
+        match (source_format, target_format) {
+            (FileFormat::Word, FileFormat::Markdown) => docx_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Word) => md_to_docx(input, &output_path),
+            (FileFormat::Excel, FileFormat::Markdown) => xlsx_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Excel) => md_to_xlsx(input, &output_path),
+            (FileFormat::Pdf, FileFormat::Markdown) => pdf_to_md(input, &output_path),
+            (FileFormat::Markdown, FileFormat::Pdf) => md_to_pdf(input, &output_path),
+            _ => anyhow::bail!("Unsupported conversion: {:?} to {:?}", source_format, target_format),
+        }?;
+        
         println!("Successfully converted {:?} to {:?}", input, output_path);
     } else {
         anyhow::bail!("Either --output or --to must be specified");
@@ -186,76 +222,98 @@ fn handle_convert(converter: &FileConverter, input: &PathBuf, output: Option<Pat
     Ok(())
 }
 
-fn handle_word_to_md(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_word_to_md(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::docx_to_md;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("md")
     });
 
-    converter.convert(input, &output_path)
+    docx_to_md(input, &output_path)
         .with_context(|| format!("Failed to convert Word to Markdown"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
 }
 
-fn handle_md_to_word(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_md_to_word(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::md_to_docx;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("docx")
     });
 
-    converter.convert(input, &output_path)
+    md_to_docx(input, &output_path)
         .with_context(|| format!("Failed to convert Markdown to Word"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
 }
 
-fn handle_excel_to_md(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_excel_to_md(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::xlsx_to_md;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("md")
     });
 
-    converter.convert(input, &output_path)
+    xlsx_to_md(input, &output_path)
         .with_context(|| format!("Failed to convert Excel to Markdown"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
 }
 
-fn handle_md_to_excel(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_md_to_excel(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::md_to_xlsx;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("xlsx")
     });
 
-    converter.convert(input, &output_path)
+    md_to_xlsx(input, &output_path)
         .with_context(|| format!("Failed to convert Markdown to Excel"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
 }
 
-fn handle_pdf_to_md(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_pdf_to_md(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::pdf_to_md;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("md")
     });
 
-    converter.convert(input, &output_path)
+    pdf_to_md(input, &output_path)
         .with_context(|| format!("Failed to convert PDF to Markdown"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
 }
 
-fn handle_md_to_pdf(converter: &FileConverter, input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+fn handle_md_to_pdf(input: &PathBuf, output: Option<PathBuf>) -> Result<()> {
+    use file_converter::md_to_pdf;
+    
     let output_path = output.unwrap_or_else(|| {
         input.with_extension("pdf")
     });
 
-    converter.convert(input, &output_path)
+    md_to_pdf(input, &output_path)
         .with_context(|| format!("Failed to convert Markdown to PDF"))?;
     
     println!("Successfully converted {:?} to {:?}", input, output_path);
     Ok(())
+}
+
+fn generate_output_path(input: &PathBuf, target_format: &FileFormat) -> PathBuf {
+    let stem = input.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    
+    let dir = input.parent().unwrap_or_else(|| std::path::Path::new("."));
+    
+    dir.join(format!("{}.{}", stem, target_format.extension()))
 }
 
 fn handle_list() {

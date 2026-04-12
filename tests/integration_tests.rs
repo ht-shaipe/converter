@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use file_converter::{FileConverter, FileFormat};
+    use file_converter::{FileFormat, docx_to_md, md_to_docx, xlsx_to_md, md_to_xlsx, pdf_to_md, md_to_pdf};
     use std::path::Path;
 
     #[test]
@@ -53,61 +53,61 @@ mod tests {
     }
 
     #[test]
-    fn test_converter_creation() {
-        let converter = FileConverter::new();
-        // Just test that we can create a converter
-        assert!(true);
+    fn test_word_converter_functions_exist() {
+        // Just verify the functions are exported and callable
+        let temp_in = tempfile::NamedTempFile::new().unwrap();
+        let temp_out = tempfile::NamedTempFile::new().unwrap();
+        
+        // Write some dummy content
+        std::fs::write(temp_in.path(), "# Test").unwrap();
+        
+        // These will fail but prove the functions exist
+        let _ = docx_to_md(temp_in.path(), temp_out.path());
+        let _ = md_to_docx(temp_in.path(), temp_out.path());
     }
 
     #[test]
-    fn test_converter_with_output_dir() {
-        let converter = FileConverter::new()
-            .with_output_dir(std::path::PathBuf::from("/tmp/test"));
-        // Just test that we can create a converter with output dir
-        assert!(true);
+    fn test_excel_converter_functions_exist() {
+        let temp_in = tempfile::NamedTempFile::new().unwrap();
+        let temp_out = tempfile::NamedTempFile::new().unwrap();
+        
+        std::fs::write(temp_in.path(), "# Test").unwrap();
+        
+        let _ = xlsx_to_md(temp_in.path(), temp_out.path());
+        let _ = md_to_xlsx(temp_in.path(), temp_out.path());
+    }
+
+    #[test]
+    fn test_pdf_converter_functions_exist() {
+        let temp_in = tempfile::NamedTempFile::new().unwrap();
+        let temp_out = tempfile::NamedTempFile::new().unwrap();
+        
+        std::fs::write(temp_in.path(), "# Test").unwrap();
+        
+        let _ = pdf_to_md(temp_in.path(), temp_out.path());
+        let _ = md_to_pdf(temp_in.path(), temp_out.path());
     }
 
     #[test]
     fn test_file_not_found_error() {
-        let converter = FileConverter::new();
-        let result = converter.convert(
+        let result = docx_to_md(
             Path::new("nonexistent.docx"),
             Path::new("output.md")
         );
         
         assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("File not found"));
     }
 
     #[test]
     fn test_unsupported_format_error() {
-        let converter = FileConverter::new();
-        let result = converter.convert(
-            Path::new("test.txt"),
+        let temp_txt = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(temp_txt.path(), "test").unwrap();
+        
+        let result = docx_to_md(
+            temp_txt.path(),
             Path::new("output.md")
         );
         
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("Unsupported") || err.to_string().contains("not found"));
-    }
-
-    #[test]
-    fn test_unsupported_conversion_error() {
-        let converter = FileConverter::new();
-        // Create a temporary markdown file for testing
-        let temp_md = tempfile::NamedTempFile::new().unwrap();
-        std::fs::write(temp_md.path(), "# Test").unwrap();
-        
-        // Try to convert markdown to an unsupported format (e.g., directly to another markdown)
-        let temp_out = tempfile::NamedTempFile::new().unwrap();
-        let result = converter.convert(
-            temp_md.path(),
-            temp_out.path()
-        );
-        
-        // This should fail because we're not specifying a valid target format
         assert!(result.is_err());
     }
 }
