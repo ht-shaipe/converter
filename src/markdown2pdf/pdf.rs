@@ -16,8 +16,8 @@
 //! The module is designed to be both robust for production use and flexible enough to accommodate various document structures
 //! and styling needs.
 
-use super::styling::StyleMatch;
 use super::markdown::Token;
+use super::styling::StyleMatch;
 use genpdfi::{
     fonts::{FontData, FontFamily},
     Alignment, Document,
@@ -77,72 +77,75 @@ impl Pdf {
                 | "monospace"
         );
 
-        let font_err = |name: &str, e: &dyn std::fmt::Display| super::MdpError::FontError {
+        let font_err = |name: &str, e: &dyn std::fmt::Display| {
+            super::MdpError::FontError {
             font_name: name.to_string(),
             message: e.to_string(),
             suggestion: "Ensure font files are accessible or use a built-in font (Helvetica, Times, Courier).".to_string(),
+        }
         };
 
         // Load main font
-        let font_family = if let Some(source) =
-            font_config.and_then(|c| c.default_font_source.clone())
-        {
-            match super::fonts::load_font_family(source) {
-                Ok(font) => font,
-                Err(e) => {
-                    warn!("Could not load font from source: {}. Using Helvetica.", e);
-                    super::fonts::load_builtin_font_family("Helvetica")
-                        .map_err(|e| font_err("Helvetica", &e))?
+        let font_family =
+            if let Some(source) = font_config.and_then(|c| c.default_font_source.clone()) {
+                match super::fonts::load_font_family(source) {
+                    Ok(font) => font,
+                    Err(e) => {
+                        warn!("Could not load font from source: {}. Using Helvetica.", e);
+                        super::fonts::load_builtin_font_family("Helvetica")
+                            .map_err(|e| font_err("Helvetica", &e))?
+                    }
                 }
-            }
-        } else if is_builtin {
-            // Fast path: built-in fonts need no file I/O for rendering
-            super::fonts::load_builtin_font_family(family_name)
-                .map_err(|e| font_err(family_name, &e))?
-        } else {
-            // Custom font: collect text for subsetting if enabled
-            let text = if font_config.map(|c| c.enable_subsetting).unwrap_or(true) {
-                Some(Token::collect_all_text(&input))
+            } else if is_builtin {
+                // Fast path: built-in fonts need no file I/O for rendering
+                super::fonts::load_builtin_font_family(family_name)
+                    .map_err(|e| font_err(family_name, &e))?
             } else {
-                None
-            };
+                // Custom font: collect text for subsetting if enabled
+                let text = if font_config.map(|c| c.enable_subsetting).unwrap_or(true) {
+                    Some(Token::collect_all_text(&input))
+                } else {
+                    None
+                };
 
-            match super::fonts::load_font(family_name, font_config, text.as_deref()) {
-                Ok(font) => font,
-                Err(e) => {
-                    warn!(
-                        "Could not load font '{}': {}. Using Helvetica.",
-                        family_name, e
-                    );
-                    super::fonts::load_builtin_font_family("Helvetica")
-                        .map_err(|e| font_err("Helvetica", &e))?
+                match super::fonts::load_font(family_name, font_config, text.as_deref()) {
+                    Ok(font) => font,
+                    Err(e) => {
+                        warn!(
+                            "Could not load font '{}': {}. Using Helvetica.",
+                            family_name, e
+                        );
+                        super::fonts::load_builtin_font_family("Helvetica")
+                            .map_err(|e| font_err("Helvetica", &e))?
+                    }
                 }
-            }
-        };
+            };
 
         // Load code font (built-in Courier is fastest)
         let code_font_name = font_config
             .and_then(|cfg| cfg.code_font.as_deref())
             .unwrap_or("Courier");
 
-        let code_font_family = if let Some(source) =
-            font_config.and_then(|c| c.code_font_source.clone())
-        {
-            match super::fonts::load_font_family(source) {
-                Ok(font) => font,
-                Err(e) => {
-                    warn!("Could not load code font from source: {}. Using Courier.", e);
-                    super::fonts::load_builtin_font_family("Courier")
-                        .map_err(|e| font_err("Courier", &e))?
+        let code_font_family =
+            if let Some(source) = font_config.and_then(|c| c.code_font_source.clone()) {
+                match super::fonts::load_font_family(source) {
+                    Ok(font) => font,
+                    Err(e) => {
+                        warn!(
+                            "Could not load code font from source: {}. Using Courier.",
+                            e
+                        );
+                        super::fonts::load_builtin_font_family("Courier")
+                            .map_err(|e| font_err("Courier", &e))?
+                    }
                 }
-            }
-        } else {
-            match super::fonts::load_builtin_font_family(code_font_name) {
-                Ok(font) => font,
-                Err(_) => super::fonts::load_builtin_font_family("Courier")
-                    .map_err(|e| font_err("Courier", &e))?,
-            }
-        };
+            } else {
+                match super::fonts::load_builtin_font_family(code_font_name) {
+                    Ok(font) => font,
+                    Err(_) => super::fonts::load_builtin_font_family("Courier")
+                        .map_err(|e| font_err("Courier", &e))?,
+                }
+            };
 
         Ok(Self {
             input,
@@ -601,7 +604,6 @@ impl Pdf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::styling::StyleMatch;
 
     // Helper function to create a basic PDF instance for testing
     fn create_test_pdf(tokens: Vec<Token>) -> Pdf {
