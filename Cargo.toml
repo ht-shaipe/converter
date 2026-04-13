@@ -2,66 +2,42 @@
 name = "file_converter"
 version = "0.1.0"
 edition = "2021"
-description = "A Rust-based file converter crate for converting between Word, Excel, PDF, and Markdown formats"
+description = "A Rust-based file converter library"
 license = "MIT"
-readme = "README.md"
-repository = "https://github.com/yourusername/file_converter"
-keywords = ["converter", "word", "excel", "pdf", "markdown"]
-categories = ["command-line-utilities", "text-processing"]
 
 [dependencies]
-# CLI argument parsing
-clap = { version = "4.4", features = ["derive"] }
-
-# Error handling
 anyhow = "1.0"
 thiserror = "1.0"
-
-# Async runtime (optional, for future enhancements)
-tokio = { version = "1.35", features = ["full"], optional = true }
-
-# Word document processing (docx)
-docx-rs = "0.4"
-zip = "0.6"
-base64 = "0.21"
-regex = "1.10"
-
-# Excel processing
-calamine = "0.23"
-
-# PDF processing
-lopdf = "0.31"
-
-# Image processing (for ICO conversion)
-image = "0.24"
-ico = "0.3"
-
-# Markdown processing
-pulldown-cmark = "0.9"
-
-# HTML processing (for intermediate conversion)
-html5ever = "0.26"
-markup5ever_rcdom = "0.2"
-
-# File type detection
-infer = "0.15"
-
-# Logging
 log = "0.4"
-env_logger = "0.10"
-
-# Path handling
-path-absolutize = "3.1"
-
-[dev-dependencies]
-tempfile = "3.9"
-assert_cmd = "2.0"
-predicates = "3.0"
+calamine = "0.34.0"
+rust_xlsxwriter = "0.94.0"
+zip = "8.5.1"
+regex = "1.12.3"
+base64 = "0.22"
+lopdf = "0.40.0"
+image = { version = "0.25.10", features = ["png", "jpeg", "gif", "webp"] }
+ico = "0.5.0"
+clap = { version = "4.6.0", features = ["derive"] }
+env_logger = "0.11.10"
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "macros", "io-std"] }
+rmcp = { version = "1.4.0", features = ["server", "transport-io", "macros", "schemars"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+schemars = { version = "1.2", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+printpdf = { version = "0.7.0", default-features = false, features = ["image"] }
+pulldown-cmark = "0.13.3"
+genpdfi = "0.2.7"
+toml = "0.8"
 
 [[bin]]
 name = "file_converter"
 path = "src/bin/file_converter.rs"
 
-[features]
-default = []
-async = ["tokio"]
+[[bin]]
+name = "file_converter_mcp"
+path = "src/bin/file_converter_mcp.rs"
+
+[dev-dependencies]
+tempfile = "3.9"

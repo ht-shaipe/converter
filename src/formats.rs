@@ -1,54 +1,27 @@
-//! File format definitions and detection
+//! File format definitions
 
-use crate::error::{ConverterError, Result};
 use std::path::Path;
 
-/// Supported file formats
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileFormat {
-    /// Microsoft Word document (DOCX)
     Word,
-    /// Microsoft Excel spreadsheet (XLSX)
     Excel,
-    /// Portable Document Format (PDF)
     Pdf,
-    /// Markdown document
     Markdown,
-    /// Unknown or unsupported format
     Unknown,
 }
 
 impl FileFormat {
-    /// Detect file format from file extension
     pub fn from_extension(path: &Path) -> Self {
-        match path.extension().and_then(|ext| ext.to_str()) {
-            Some("docx") => FileFormat::Word,
-            Some("xlsx") | Some("xls") => FileFormat::Excel,
-            Some("pdf") => FileFormat::Pdf,
-            Some("md") | Some("markdown") => FileFormat::Markdown,
+        match path.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()) {
+            Some(ext) if ext == "docx" => FileFormat::Word,
+            Some(ext) if ext == "xlsx" || ext == "xls" || ext == "xlsm" => FileFormat::Excel,
+            Some(ext) if ext == "pdf" => FileFormat::Pdf,
+            Some(ext) if ext == "md" || ext == "markdown" => FileFormat::Markdown,
             _ => FileFormat::Unknown,
         }
     }
 
-    /// Detect file format from file path
-    pub fn from_path(path: &Path) -> Result<Self> {
-        if !path.exists() {
-            return Err(ConverterError::FileNotFound(
-                path.display().to_string(),
-            ));
-        }
-
-        let format = Self::from_extension(path);
-        if format == FileFormat::Unknown {
-            Err(ConverterError::UnsupportedFormat(
-                path.display().to_string(),
-            ))
-        } else {
-            Ok(format)
-        }
-    }
-
-    /// Get the primary file extension for this format
     pub fn extension(&self) -> &'static str {
         match self {
             FileFormat::Word => "docx",
@@ -59,10 +32,9 @@ impl FileFormat {
         }
     }
 
-    /// Check if conversion to another format is supported
-    pub fn can_convert_to(&self, target: &FileFormat) -> bool {
+    pub fn can_convert_to(&self, to: &FileFormat) -> bool {
         matches!(
-            (self, target),
+            (self, to),
             (FileFormat::Word, FileFormat::Markdown)
                 | (FileFormat::Markdown, FileFormat::Word)
                 | (FileFormat::Excel, FileFormat::Markdown)
@@ -73,39 +45,53 @@ impl FileFormat {
     }
 }
 
-/// Conversion type specifying source and target formats
-#[derive(Debug, Clone)]
-pub struct ConversionType {
-    pub source: FileFormat,
-    pub target: FileFormat,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConversionType {
+    WordToMarkdown,
+    MarkdownToWord,
+    ExcelToMarkdown,
+    MarkdownToExcel,
+    PdfToMarkdown,
+    MarkdownToPdf,
+    ImageToIco,
 }
 
 impl ConversionType {
-    /// Create a new conversion type
-    pub fn new(source: FileFormat, target: FileFormat) -> Self {
-        Self { source, target }
-    }
-
-    /// Check if this conversion is supported
-    pub fn is_supported(&self) -> bool {
-        self.source.can_convert_to(&self.target)
-    }
-}
-
-impl std::fmt::Display for FileFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub fn description(&self) -> &'static str {
         match self {
-            FileFormat::Word => write!(f, "Word (DOCX)"),
-            FileFormat::Excel => write!(f, "Excel (XLSX)"),
-            FileFormat::Pdf => write!(f, "PDF"),
-            FileFormat::Markdown => write!(f, "Markdown"),
-            FileFormat::Unknown => write!(f, "Unknown"),
+            ConversionType::WordToMarkdown => "Word to Markdown",
+            ConversionType::MarkdownToWord => "Markdown to Word",
+            ConversionType::ExcelToMarkdown => "Excel to Markdown",
+            ConversionType::MarkdownToExcel => "Markdown to Excel",
+            ConversionType::PdfToMarkdown => "PDF to Markdown",
+            ConversionType::MarkdownToPdf => "Markdown to PDF",
+            ConversionType::ImageToIco => "Image to ICO",
         }
     }
-}
 
-impl std::fmt::Display for ConversionType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} -> {}", self.source, self.target)
+    /// MCP / CLI 使用的短标识
+    pub fn kind_id(&self) -> &'static str {
+        match self {
+            ConversionType::WordToMarkdown => "docx_md",
+            ConversionType::MarkdownToWord => "md_docx",
+            ConversionType::ExcelToMarkdown => "xlsx_md",
+            ConversionType::MarkdownToExcel => "md_xlsx",
+            ConversionType::PdfToMarkdown => "pdf_md",
+            ConversionType::MarkdownToPdf => "md_pdf",
+            ConversionType::ImageToIco => "img_ico",
+        }
+    }
+
+    pub fn from_kind_id(s: &str) -> Option<Self> {
+        match s {
+            "docx_md" | "word_md" => Some(ConversionType::WordToMarkdown),
+            "md_docx" | "md_word" => Some(ConversionType::MarkdownToWord),
+            "xlsx_md" | "excel_md" => Some(ConversionType::ExcelToMarkdown),
+            "md_xlsx" | "md_excel" => Some(ConversionType::MarkdownToExcel),
+            "pdf_md" => Some(ConversionType::PdfToMarkdown),
+            "md_pdf" => Some(ConversionType::MarkdownToPdf),
+            "img_ico" | "image_ico" => Some(ConversionType::ImageToIco),
+            _ => None,
+        }
     }
 }

@@ -1,4 +1,30 @@
-```
+# Build artifacts
 target/
+**/target/
 **/*.rs.bk
-```
+
+# Output files
+output/
+**/output/
+
+*.lock
+
+# Dependencies
+Cargo.lock
+**/vendor/
+**/deps/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo

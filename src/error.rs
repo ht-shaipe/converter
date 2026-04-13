@@ -38,9 +38,3 @@ pub enum ConverterError {
     #[error("Conversion failed: {0}")]
     ConversionFailed(String),
 }
-
-impl From<ConverterError> for anyhow::Error {
-    fn from(err: ConverterError) -> Self {
-        anyhow::anyhow!(err.to_string())
-    }
-}
